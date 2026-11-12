@@ -5,15 +5,15 @@ import './garment.css';
 const root=document.querySelector<HTMLDivElement>('#garment-app')!;
 root.innerHTML=`
 <header class="topbar"><div><div class="eyebrow">GARMENT CLOTH LAB / 04</div><h1>Garment Motion</h1></div><div class="status"><i></i> HANGER DISPLAY · LOCAL</div></header>
-<main class="layout"><section class="stage"><div class="stage-note"><span>LIVE FABRIC SIMULATION</span><span id="fps">60 FPS</span></div><div id="viewport"></div><div class="stage-hint">拖动衣服施加外力 · 拖动空白区域旋转视角</div></section>
+<main class="layout"><section class="stage"><div class="stage-note"><span>LIVE FABRIC SIMULATION</span><span id="fps">60 FPS</span></div><div id="viewport"></div><div class="stage-hint">按住衣架左右拖动，让整件衣服跟着晃动 · 拖动空白区域旋转视角</div></section>
 <aside class="panel"><section><div class="section-label">GARMENT</div><div class="garment-card"><img src="${import.meta.env.BASE_URL}white-tshirt.webp" alt="White T-shirt"/><div><b>Classic White T-shirt</b><small>内置基准素材 · 棉质</small></div></div></section>
 <section><div class="section-label">YOUR IMAGE</div><label class="upload"><input id="upload" type="file" accept="image/png,image/jpeg,image/webp"><span>＋</span><div><b>替换服装图片</b><small>建议使用透明背景图片</small></div></label><div id="filename" class="filename">当前：内置白色 T 恤</div></section>
 <section><div class="section-label">FABRIC MOTION</div><label class="control"><span>风力 <output id="wind-value">0.22</output></span><input id="wind" type="range" min="0" max="1" step="0.01" value="0.22"></label><label class="control"><span>柔软度 <output id="soft-value">0.42</output></span><input id="soft" type="range" min="0.1" max="0.9" step="0.01" value="0.42"></label><label class="control"><span>阻尼 <output id="damp-value">0.055</output></span><input id="damp" type="range" min="0.015" max="0.12" step="0.001" value="0.055"></label><label class="toggle"><input id="auto" type="checkbox" checked><span>自然微风</span></label>
-<label class="toggle"><input id="hanger-motion" type="checkbox" checked><span>衣架自然晃动</span></label>
-<label class="control"><span>衣架摆幅 <output id="hanger-value">0.65</output></span><input id="hanger-sway" type="range" min="0" max="1.5" step="0.01" value="0.65"></label>
+<label class="toggle"><input id="hanger-motion" type="checkbox" checked><span>允许鼠标拖动衣架</span></label>
+<label class="control"><span>拖动灵敏度 <output id="hanger-value">0.65</output></span><input id="hanger-sway" type="range" min="0" max="1.5" step="0.01" value="0.65"></label>
 </section>
-<section class="actions"><button id="gust" class="primary">轻推衣摆</button><button id="reset" class="secondary">恢复初始状态</button></section><p class="disclaimer">V0.4：衣架实体与挂钩完整显示；衣架摆动会带动整件衣服。，使用稳定规则网格与低幅度受控摆动。透明通道只负责显示裁切，不参与网格拓扑。当前是视觉优先的 2.5D 布料展示，不是服装裁片仿真。</p></aside></main>
-<footer>GarmentClothLab · Prototype 0.4 <span>Visible hanger · Gentle pointer force · Browser-local physics</span></footer>`;
+<section class="actions"><button id="gust" class="primary">轻推衣摆</button><button id="reset" class="secondary">恢复初始状态</button></section><p class="disclaimer">V0.5：按住衣架左右拖动，松开后衣架自然回摆，肩部固定点带动整件衣服。透明通道只负责显示裁切，不参与网格拓扑。当前是视觉优先的 2.5D 布料展示，不是服装裁片仿真。</p></aside></main>
+<footer>GarmentClothLab · Prototype 0.5 <span>Drag the hanger to swing · Damped return · Browser-local physics</span></footer>`;
 
 const host=document.querySelector<HTMLDivElement>('#viewport')!;
 const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
@@ -35,6 +35,14 @@ const hangerCurve=new THREE.CatmullRomCurve3([
 ]);
 const hangerBody=new THREE.Mesh(new THREE.TubeGeometry(hangerCurve,32,.026,8,false),hangerMaterial);
 hangerGroup.add(hangerBody);
+// Invisible, generous grab zone over the wooden hanger bar.
+// It makes the interaction discoverable and easy to hit without changing visuals.
+const hangerGrabZone=new THREE.Mesh(
+ new THREE.BoxGeometry(1.62,.38,.16),
+ new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false, colorWrite:false}),
+);
+hangerGrabZone.position.set(0,-.68,.12);
+hangerGroup.add(hangerGrabZone);
 const hookCurve=new THREE.CatmullRomCurve3([
  new THREE.Vector3(0,-.53,0),new THREE.Vector3(0,-.40,0),new THREE.Vector3(.02,-.28,0),
  new THREE.Vector3(.13,-.18,0),new THREE.Vector3(.19,-.10,0),new THREE.Vector3(.17,-.04,0),new THREE.Vector3(.10,-.03,0)
@@ -70,15 +78,17 @@ function updatePins(){
 setPins();
 let wind=.22,soft=.42,damping=.055,auto=true,time=0,gust=0,acc=0;
 let hangerEnabled=true,hangerAmplitude=.65,hangerAngle=0,hangerVelocity=0;
+let hangerDragging=false,hangerDragStartX=0,hangerDragStartAngle=0,lastHangerAngle=0,lastHangerMoveAt=0;
 const h=1/120;
 function reset(){initPose();hangerGroup.rotation.set(0,0,0);hangerAngle=0;hangerVelocity=0;setPins();acc=0;geometry.attributes.position.needsUpdate=true;geometry.computeVertexNormals();}
 function substep(dt:number){
- const targetAngle=hangerEnabled?Math.sin(time*.72)*.025*hangerAmplitude:0;
- const angularAcceleration=(targetAngle-hangerAngle)*7.5-hangerVelocity*3.4;
- hangerVelocity+=angularAcceleration*dt;
- hangerAngle+=hangerVelocity*dt;
+ if(!hangerDragging){
+  const angularAcceleration=-hangerAngle*10.5-hangerVelocity*4.2;
+  hangerVelocity+=angularAcceleration*dt;
+  hangerAngle+=hangerVelocity*dt;
+ }
  hangerGroup.rotation.z=hangerAngle;
- hangerGroup.rotation.x=hangerEnabled?Math.sin(time*.46)*.012*hangerAmplitude:0;
+ hangerGroup.rotation.x=0;
  updatePins();
  const damp=Math.pow(1-damping,dt*60);
  for(let i=0;i<count;i++){const k=i*3,p=pins.get(i);if(p){pos[k]=p.x;pos[k+1]=p.y;pos[k+2]=p.z;prev[k]=p.x;prev[k+1]=p.y;prev[k+2]=p.z;continue;}const vx=(pos[k]-prev[k])*damp,vy=(pos[k+1]-prev[k+1])*damp,vz=(pos[k+2]-prev[k+2])*damp;prev[k]=pos[k];prev[k+1]=pos[k+1];prev[k+2]=pos[k+2];const u=(i%cols)/(cols-1),v=Math.floor(i/cols)/(rows-1),env=Math.sin(Math.PI*u)*(.22+.78*v),breeze=auto?(Math.sin(time*.82+u*3.2+v*2.1)*.55+Math.sin(time*.43-u*1.7+v*3.1)*.25):0,force=(breeze*wind+gust)*env;pos[k]+=vx+Math.sin(time*.6+v*2.4)*force*dt*dt*2.2;pos[k+1]+=vy-.16*dt*dt*(.25+v);pos[k+2]+=vz+force*dt*dt*8;}
@@ -116,11 +126,41 @@ document.querySelector<HTMLInputElement>('#hanger-motion')!.addEventListener('ch
 document.querySelector<HTMLInputElement>('#auto')!.addEventListener('change',e=>auto=(e.target as HTMLInputElement).checked);
 document.querySelector('#gust')!.addEventListener('click',()=>{gust=.28;});
 document.querySelector('#reset')!.addEventListener('click',reset);
-const ray=new THREE.Raycaster(),pointer=new THREE.Vector2();let dragging=false;let lastDragPoint:THREE.Vector3|null=null;
+const ray=new THREE.Raycaster(),pointer=new THREE.Vector2();
+let dragging=false;let lastDragPoint:THREE.Vector3|null=null;
 function pointerAt(e:PointerEvent){const r=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);}
-renderer.domElement.addEventListener('pointerdown',e=>{pointerAt(e);ray.setFromCamera(pointer,camera);const hit=ray.intersectObject(cloth)[0];if(!hit)return;dragging=true;lastDragPoint=hit.point.clone();controls.enabled=false;renderer.domElement.setPointerCapture(e.pointerId);e.stopImmediatePropagation();});
-renderer.domElement.addEventListener('pointermove',e=>{if(!dragging)return;pointerAt(e);ray.setFromCamera(pointer,camera);const hit=ray.intersectObject(cloth)[0];if(hit&&lastDragPoint){const dx=hit.point.x-lastDragPoint.x,dy=hit.point.y-lastDragPoint.y;kick(hit.point.x,hit.point.y,dx,dy);lastDragPoint.copy(hit.point);}});
-const stop=()=>{dragging=false;lastDragPoint=null;controls.enabled=true;};renderer.domElement.addEventListener('pointerup',stop);renderer.domElement.addEventListener('pointercancel',stop);
+renderer.domElement.addEventListener('pointerdown',e=>{
+ pointerAt(e);ray.setFromCamera(pointer,camera);
+ // Hanger hit-testing has priority: grabbing the hanger swings the hanger,
+ // while grabbing the fabric itself remains a separate, gentle interaction.
+ const hangerHit=ray.intersectObject(hangerGroup,true)[0];
+ if(hangerHit&&hangerEnabled){
+  hangerDragging=true;hangerDragStartX=e.clientX;hangerDragStartAngle=hangerAngle;
+  lastHangerAngle=hangerAngle;lastHangerMoveAt=performance.now();
+  controls.enabled=false;renderer.domElement.setPointerCapture(e.pointerId);
+  e.preventDefault();e.stopImmediatePropagation();return;
+ }
+ const hit=ray.intersectObject(cloth)[0];if(!hit)return;
+ dragging=true;lastDragPoint=hit.point.clone();controls.enabled=false;
+ renderer.domElement.setPointerCapture(e.pointerId);e.stopImmediatePropagation();
+},true);
+renderer.domElement.addEventListener('pointermove',e=>{
+ if(hangerDragging){
+  const rect=renderer.domElement.getBoundingClientRect();
+  const delta=(e.clientX-hangerDragStartX)/rect.width;
+  hangerAngle=THREE.MathUtils.clamp(hangerDragStartAngle+delta*2.2*hangerAmplitude,-.62,.62);
+  const now=performance.now(),elapsed=Math.max(.008,(now-lastHangerMoveAt)/1000);
+  hangerVelocity=(hangerAngle-lastHangerAngle)/elapsed;
+  lastHangerAngle=hangerAngle;lastHangerMoveAt=now;
+  hangerGroup.rotation.z=hangerAngle;updatePins();
+  e.preventDefault();return;
+ }
+ if(!dragging)return;
+ pointerAt(e);ray.setFromCamera(pointer,camera);const hit=ray.intersectObject(cloth)[0];
+ if(hit&&lastDragPoint){const dx=hit.point.x-lastDragPoint.x,dy=hit.point.y-lastDragPoint.y;kick(hit.point.x,hit.point.y,dx,dy);lastDragPoint.copy(hit.point);}
+});
+const stop=()=>{hangerDragging=false;dragging=false;lastDragPoint=null;controls.enabled=true;};
+renderer.domElement.addEventListener('pointerup',stop);renderer.domElement.addEventListener('pointercancel',stop);
 let last=performance.now(),frames=0,fpsStart=last;
 function animate(now:number){const dt=Math.min((now-last)/1000,.05);last=now;step(dt);geometry.attributes.position.needsUpdate=true;geometry.computeVertexNormals();controls.update();renderer.render(scene,camera);frames++;if(now-fpsStart>1000){document.querySelector('#fps')!.textContent=Math.round(frames*1000/(now-fpsStart))+' FPS';frames=0;fpsStart=now;}requestAnimationFrame(animate);}
 function resize(){const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h);}
