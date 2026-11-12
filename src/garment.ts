@@ -13,7 +13,7 @@ root.innerHTML=`
 <label class="control"><span>拖动灵敏度 <output id="hanger-value">0.65</output></span><input id="hanger-sway" type="range" min="0" max="1.5" step="0.01" value="0.65"></label>
 </section>
 <section class="actions"><button id="gust" class="primary">轻推衣摆</button><button id="reset" class="secondary">恢复初始状态</button></section><p class="disclaimer">V0.5：按住衣架左右拖动，松开后衣架自然回摆，肩部固定点带动整件衣服。透明通道只负责显示裁切，不参与网格拓扑。当前是视觉优先的 2.5D 布料展示，不是服装裁片仿真。</p></aside></main>
-<footer>GarmentClothLab · Prototype 0.4 <span>Visible hanger · Gentle pointer force · Browser-local physics</span></footer>`;
+<footer>GarmentClothLab · Prototype 0.5 <span>Drag the hanger to swing · Damped return · Browser-local physics</span></footer>`;
 
 const host=document.querySelector<HTMLDivElement>('#viewport')!;
 const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
@@ -35,6 +35,14 @@ const hangerCurve=new THREE.CatmullRomCurve3([
 ]);
 const hangerBody=new THREE.Mesh(new THREE.TubeGeometry(hangerCurve,32,.026,8,false),hangerMaterial);
 hangerGroup.add(hangerBody);
+// Invisible, generous grab zone over the wooden hanger bar.
+// It makes the interaction discoverable and easy to hit without changing visuals.
+const hangerGrabZone=new THREE.Mesh(
+ new THREE.BoxGeometry(1.62,.38,.16),
+ new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false, colorWrite:false}),
+);
+hangerGrabZone.position.set(0,-.68,.12);
+hangerGroup.add(hangerGrabZone);
 const hookCurve=new THREE.CatmullRomCurve3([
  new THREE.Vector3(0,-.53,0),new THREE.Vector3(0,-.40,0),new THREE.Vector3(.02,-.28,0),
  new THREE.Vector3(.13,-.18,0),new THREE.Vector3(.19,-.10,0),new THREE.Vector3(.17,-.04,0),new THREE.Vector3(.10,-.03,0)
