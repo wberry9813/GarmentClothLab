@@ -1,15 +1,21 @@
 # GarmentClothLab
 
-A browser-first experiment for turning garment images into expressive cloth motion.
+A browser-first experiment for expressive garment-image cloth motion.
 
-This repository starts from [Holocloth](https://github.com/dmitrykurash/holocloth) by Dmitry Kurash (MIT). The upstream project is preserved as the `upstream` Git remote in local clones.
+The repository builds on [Holocloth](https://github.com/dmitrykurash/holocloth) by Dmitry Kurash (MIT). The upstream project is preserved as the `upstream` remote in local clones.
 
-## Prototype
+## Pages
 
 - Original Holocloth playground: `/`
-- Garment motion experiment: `/garment.html`
+- Garment Motion experiment: `/garment.html`
 
-The first garment prototype maps garment-shaped image textures onto a 3D cloth grid and simulates gravity, wind, stretch, shear, and bending locally in the browser. It is deliberately **not** full garment reconstruction: automatic segmentation, sewing-pattern topology, inter-piece seams, self-collision, and true garment-specific meshes remain future work.
+## Current direction: single-piece controlled cloth
+
+The garment is treated as one complete image mapped onto a stable regular grid. Image alpha is used only for visual transparency; it does not delete physical grid vertices. A pre-draped rest pose, two upper support points, restrained wind, damping, and low-amplitude depth motion create a stable presentation animation.
+
+The built-in white T-shirt image is derived from the supplied checkerboard-background reference: the checkerboard was removed into an alpha channel and the image was cropped/resized to WebP for browser delivery.
+
+This is a visual-first 2.5D cloth display, not a sewing-pattern or physically complete garment reconstruction. It does not split sleeves/hem, run AI recognition, or require server inference.
 
 ## Run locally
 
@@ -22,8 +28,8 @@ Open `http://localhost:5199/garment.html`.
 
 ## Deploy
 
-GitHub Actions deploys the `feat/garment-cloth-prototype` branch to GitHub Pages. The build runs on a standard runner; cloth simulation runs on the visitor's device. No GPU inference server is required.
+GitHub Actions deploys the default branch to GitHub Pages. Simulation runs locally in the visitor's browser; no GPU inference server is required.
 
 ## Upstream attribution
 
-The original Holocloth project is MIT licensed. Its copyright and license notice are retained in `LICENSE`. New prototype code is contributed under the same MIT license unless otherwise noted.
+The original Holocloth project is MIT licensed. Its copyright and license notice are retained in `LICENSE`.

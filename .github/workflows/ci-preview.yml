@@ -1,7 +1,7 @@
 name: Validate Garment Prototype
 on:
   push:
-    branches: [feat/garment-silhouette-physics]
+    branches: [feat/garment-silhouette-physics, feat/garment-controlled-drape-v03]
   workflow_dispatch:
 permissions:
   contents: read
