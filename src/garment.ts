@@ -4,7 +4,7 @@ import './garment.css';
 
 const root=document.querySelector<HTMLDivElement>('#garment-app')!;
 root.innerHTML=`
-<header class="topbar"><div><div class="eyebrow">GARMENT CLOTH LAB / 03</div><h1>Garment Motion</h1></div><div class="status"><i></i> SINGLE-PIECE CLOTH · LOCAL</div></header>
+<header class="topbar"><div><div class="eyebrow">GARMENT CLOTH LAB / 04</div><h1>Garment Motion</h1></div><div class="status"><i></i> HANGER DISPLAY · LOCAL</div></header>
 <main class="layout"><section class="stage"><div class="stage-note"><span>LIVE FABRIC SIMULATION</span><span id="fps">60 FPS</span></div><div id="viewport"></div><div class="stage-hint">拖动衣服施加外力 · 拖动空白区域旋转视角</div></section>
 <aside class="panel"><section><div class="section-label">GARMENT</div><div class="garment-card"><img src="${import.meta.env.BASE_URL}white-tshirt.webp" alt="White T-shirt"/><div><b>Classic White T-shirt</b><small>内置基准素材 · 棉质</small></div></div></section>
 <section><div class="section-label">YOUR IMAGE</div><label class="upload"><input id="upload" type="file" accept="image/png,image/jpeg,image/webp"><span>＋</span><div><b>替换服装图片</b><small>建议使用透明背景图片</small></div></label><div id="filename" class="filename">当前：内置白色 T 恤</div></section>
@@ -12,34 +12,34 @@ root.innerHTML=`
 <label class="toggle"><input id="hanger-motion" type="checkbox" checked><span>衣架自然晃动</span></label>
 <label class="control"><span>衣架摆幅 <output id="hanger-value">0.65</output></span><input id="hanger-sway" type="range" min="0" max="1.5" step="0.01" value="0.65"></label>
 </section>
-<section class="actions"><button id="gust" class="primary">轻推衣摆</button><button id="reset" class="secondary">恢复初始状态</button></section><p class="disclaimer">V0.3：整件衣服作为一个整体，使用稳定规则网格与低幅度受控摆动。透明通道只负责显示裁切，不参与网格拓扑。当前是视觉优先的 2.5D 布料展示，不是服装裁片仿真。</p></aside></main>
-<footer>GarmentClothLab · Prototype 0.3 <span>Stable grid · Controlled drape · Browser-local physics</span></footer>`;
+<section class="actions"><button id="gust" class="primary">轻推衣摆</button><button id="reset" class="secondary">恢复初始状态</button></section><p class="disclaimer">V0.4：衣架实体与挂钩完整显示；衣架摆动会带动整件衣服。，使用稳定规则网格与低幅度受控摆动。透明通道只负责显示裁切，不参与网格拓扑。当前是视觉优先的 2.5D 布料展示，不是服装裁片仿真。</p></aside></main>
+<footer>GarmentClothLab · Prototype 0.4 <span>Visible hanger · Gentle pointer force · Browser-local physics</span></footer>`;
 
 const host=document.querySelector<HTMLDivElement>('#viewport')!;
 const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));renderer.setSize(host.clientWidth,host.clientHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;host.appendChild(renderer.domElement);
 const scene=new THREE.Scene();scene.background=new THREE.Color('#eeeae4');
-const camera=new THREE.PerspectiveCamera(32,host.clientWidth/host.clientHeight,.1,40);camera.position.set(0,.02,6.2);
-const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.07;controls.enablePan=false;controls.minDistance=4.5;controls.maxDistance=8;
+const camera=new THREE.PerspectiveCamera(32,host.clientWidth/host.clientHeight,.1,40);camera.position.set(0,.22,7.0);
+const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.07;controls.enablePan=false;controls.minDistance=5.0;controls.maxDistance=9;controls.target.set(0,.22,0);controls.update();
 scene.add(new THREE.HemisphereLight(0xffffff,0xb8b1a7,1.65));
 const key=new THREE.DirectionalLight(0xffffff,2);key.position.set(-2.8,3.5,4);scene.add(key);
 const fill=new THREE.DirectionalLight(0xe4e8f2,.65);fill.position.set(3,.5,2);scene.add(fill);
 const rim=new THREE.DirectionalLight(0xffffff,.9);rim.position.set(0,2,-3);scene.add(rim);
 
 const hangerGroup=new THREE.Group();
-hangerGroup.position.set(0,2.08,0.02);
+hangerGroup.position.set(0,2.08,0.12);
 const hangerMaterial=new THREE.MeshStandardMaterial({color:'#a98758',roughness:.68,metalness:.04});
 const hangerCurve=new THREE.CatmullRomCurve3([
  new THREE.Vector3(-.72,-.79,0),new THREE.Vector3(-.42,-.66,0),new THREE.Vector3(-.12,-.57,0),
  new THREE.Vector3(0,-.53,0),new THREE.Vector3(.12,-.57,0),new THREE.Vector3(.42,-.66,0),new THREE.Vector3(.72,-.79,0)
 ]);
-const hangerBody=new THREE.Mesh(new THREE.TubeGeometry(hangerCurve,32,.018,7,false),hangerMaterial);
+const hangerBody=new THREE.Mesh(new THREE.TubeGeometry(hangerCurve,32,.026,8,false),hangerMaterial);
 hangerGroup.add(hangerBody);
 const hookCurve=new THREE.CatmullRomCurve3([
- new THREE.Vector3(0,-.53,0),new THREE.Vector3(0,-.24,0),new THREE.Vector3(.02,-.08,0),
- new THREE.Vector3(.13,.03,0),new THREE.Vector3(.19,.13,0),new THREE.Vector3(.17,.22,0),new THREE.Vector3(.10,.24,0)
+ new THREE.Vector3(0,-.53,0),new THREE.Vector3(0,-.40,0),new THREE.Vector3(.02,-.28,0),
+ new THREE.Vector3(.13,-.18,0),new THREE.Vector3(.19,-.10,0),new THREE.Vector3(.17,-.04,0),new THREE.Vector3(.10,-.03,0)
 ]);
-hangerGroup.add(new THREE.Mesh(new THREE.TubeGeometry(hookCurve,24,.014,7,false),new THREE.MeshStandardMaterial({color:'#827b70',metalness:.72,roughness:.3})));
+hangerGroup.add(new THREE.Mesh(new THREE.TubeGeometry(hookCurve,24,.024,8,false),new THREE.MeshStandardMaterial({color:'#827b70',metalness:.72,roughness:.3})));
 scene.add(hangerGroup);
 
 const cols=58,rows=66,count=cols*rows,W=3.25,H=3.15,TOP=1.58;
