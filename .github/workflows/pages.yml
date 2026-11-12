@@ -1,7 +1,7 @@
 name: Deploy GarmentClothLab
 on:
   push:
-    branches: [feat/garment-cloth-prototype]
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
