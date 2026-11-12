@@ -1,50 +1,29 @@
-# Holocloth
+# GarmentClothLab
 
-A little browser tool for playing with holographic fabric.
+A browser-first experiment for turning garment images into expressive cloth motion.
 
-You get a sheet of simulated cloth floating in space. You can grab it, throw it around, drape your own images over it, and watch them ripple like they're printed on holo foil. When it looks good — export a PNG.
+This repository starts from [Holocloth](https://github.com/dmitrykurash/holocloth) by Dmitry Kurash (MIT). The upstream project is preserved as the `upstream` Git remote in local clones.
 
-![Holocloth](docs/preview.jpg)
+## Prototype
 
-## What it does
+- Original Holocloth playground: `/`
+- Garment motion experiment: `/garment.html`
 
-- **Real cloth physics** — grab the sheet and pull. It wrinkles, settles, and floats like fabric in gel. Written from scratch (Verlet integration, no physics library).
-- **Holographic material** — an iridescent foil shader with rainbow diffraction, sparkle, and bump maps. Also chrome and black cloth presets.
-- **Your images** — upload any image or SVG and it becomes the cloth, or a sticker on top of it. Everything bends and folds with the fabric.
-- **Camera looks** — macro depth of field (click to pick a focus point), ambient occlusion in the folds, film grain, bloom.
-- **Export** — one click PNG, with or without the background.
-- **Versions** — save looks and switch between them while you work.
+The first garment prototype maps garment-shaped image textures onto a 3D cloth grid and simulates gravity, wind, stretch, shear, and bending locally in the browser. It is deliberately **not** full garment reconstruction: automatic segmentation, sewing-pattern topology, inter-piece seams, self-collision, and true garment-specific meshes remain future work.
 
-## Controls
-
-| Action | How |
-|---|---|
-| Grab the cloth | Click + drag on it |
-| Orbit the camera | Drag empty space |
-| Pan | Hold `Space` + drag, or right-drag |
-| Zoom | Scroll |
-| Move a sticker | Turn on `Edit` in the Images panel, then drag it |
-
-## Run it
-
-One line (needs Node 20+ and git):
+## Run locally
 
 ```bash
-git clone https://github.com/dmitrykurash/holocloth.git && cd holocloth && npm install && npm run dev
+npm ci
+npm run dev
 ```
 
-Then open the local URL Vite prints — usually `http://localhost:5199`.
+Open `http://localhost:5199/garment.html`.
 
-## Tech
+## Deploy
 
-- [Three.js](https://threejs.org) (WebGL 2) — rendering
-- [React](https://react.dev) + TypeScript + [Vite](https://vite.dev)
-- Custom GLSL: the holo foil shader, a circle-of-confusion depth of field pass, film grain
-- Custom cloth simulation: Verlet integration with structural, shear, and bend constraints
-- [DialKit](https://github.com/joshpuckett/dialkit) by [Josh Puckett](https://x.com/joshpuckett) — the control panel UI
+GitHub Actions deploys the `feat/garment-cloth-prototype` branch to GitHub Pages. The build runs on a standard runner; cloth simulation runs on the visitor's device. No GPU inference server is required.
 
-## Credits
+## Upstream attribution
 
-Made by [Dmitry Kurash](https://x.com/DmitryKurash).
-
-UI powered by [DialKit](https://github.com/joshpuckett/dialkit) — a lovely little library by [Josh Puckett](https://x.com/joshpuckett) for dialing in interface parameters.
+The original Holocloth project is MIT licensed. Its copyright and license notice are retained in `LICENSE`. New prototype code is contributed under the same MIT license unless otherwise noted.
